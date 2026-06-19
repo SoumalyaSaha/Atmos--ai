@@ -12,7 +12,8 @@ import {
   Bell,
   Zap,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  Pencil
 } from 'lucide-react'
 import { Link, useLocation, Outlet } from 'react-router-dom'
 import { AppContext } from '../App'
@@ -30,7 +31,24 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const location = useLocation()
-  const { ecoPoints, user } = useContext(AppContext)
+  const { ecoPoints, user, setUser } = useContext(AppContext)
+
+  // Name editing state
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [newName, setNewName] = useState(user?.displayName || user?.name || '')
+
+  const handleNameUpdate = () => {
+    const nameToSave = newName.trim() || user?.name || 'Eco Warrior'
+    const updatedUser = { ...user, displayName: nameToSave }
+    if (setUser) setUser(updatedUser)
+    localStorage.setItem('user', JSON.stringify(updatedUser))
+    setIsEditingName(false)
+  }
+
+  const handleCancel = () => {
+    setNewName(user?.displayName || user?.name || '')
+    setIsEditingName(false)
+  }
 
   const notifications = [
     { id: 1, title: 'New Challenge!', message: 'Zero Plastic Week starts tomorrow', time: '2m ago', unread: true },
@@ -123,9 +141,46 @@ export default function Layout() {
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">
-                {user?.name || 'Eco Warrior'}
-              </p>
+              {isEditingName ? (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleNameUpdate()
+                      if (e.key === 'Escape') handleCancel()
+                    }}
+                    className="bg-gray-800 text-white px-2 py-1 rounded text-xs border border-gray-700 focus:border-atmos-500 focus:outline-none w-28"
+                    placeholder="Name"
+                    autoFocus
+                  />
+                  <button 
+                    onClick={handleNameUpdate}
+                    className="text-emerald-400 text-xs hover:text-emerald-300 px-1"
+                  >
+                    ✓
+                  </button>
+                  <button 
+                    onClick={handleCancel}
+                    className="text-gray-400 text-xs hover:text-gray-300 px-1"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1">
+                  <p className="text-sm font-medium text-white truncate">
+                    {user?.displayName || user?.name || 'Eco Warrior'}
+                  </p>
+                  <button 
+                    onClick={() => setIsEditingName(true)}
+                    className="text-gray-600 hover:text-atmos-400 transition-colors shrink-0"
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
               <p className="text-xs text-gray-500 truncate">
                 {user?.email || 'user@atmos.ai'}
               </p>
