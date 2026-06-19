@@ -22,7 +22,18 @@ export default function Profile() {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
-
+const [settings, setSettings] = useState({
+  notifications: true,
+  weeklyReports: true,
+  challengeReminders: true,
+  darkMode: true,
+});
+  const toggleSetting = (key) => {
+  setSettings(prev => ({
+    ...prev,
+    [key]: !prev[key]
+  }));
+};
   useEffect(() => {
     fetchProfile()
   }, [])
@@ -226,7 +237,10 @@ export default function Profile() {
             ].map((setting) => {
               const Icon = setting.icon
               return (
-                <div key={setting.key} className="glass-card p-4 flex items-center justify-between">
+                <div 
+  key={setting.key} 
+  onClick={() => toggleSetting(setting.key)}
+  className="glass-card p-4 flex items-center justify-between cursor-pointer">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center">
                       <Icon className="w-5 h-5 text-gray-400" />
@@ -236,14 +250,30 @@ export default function Profile() {
                       <p className="text-xs text-gray-500">{setting.desc}</p>
                     </div>
                   </div>
-                  <button className="relative w-12 h-6 bg-atmos-600 rounded-full transition-colors">
+                 <div 
+  className={`relative w-12 h-6 rounded-full transition-colors ${
+    settings[setting.key] ? 'bg-atmos-600' : 'bg-gray-600'
+  }`}
+>
+  <div 
+    className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+      settings[setting.key] ? 'translate-x-6' : 'translate-x-1'
+    }`}
+  />
+</div>
                     <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow" />
                   </button>
                 </div>
               )
             })}
 
-            <button className="w-full glass-card p-4 flex items-center justify-center gap-2 text-red-400 hover:bg-red-900/20 transition-colors">
+            <button
+              onClick={() => {
+    localStorage.clear();
+    window.location.href = '/';
+  }}
+              className="w-full glass-card p-4 flex items-center justify-center gap-2 text-red-400 hover:bg-red-900/20 transition-colors"
+>
               <LogOut className="w-5 h-5" />
               <span className="font-medium">Sign Out</span>
             </button>
