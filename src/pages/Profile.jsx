@@ -260,12 +260,10 @@ const [settings, setSettings] = useState({
       settings[setting.key] ? 'translate-x-6' : 'translate-x-1'
     }`}
   />
+</div>    
 </div>
-                    <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow" />
-                  </button>
-                </div>
-              )
-            })}
+)
+})}
 
             <button
               onClick={() => {
