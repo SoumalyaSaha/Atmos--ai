@@ -31,7 +31,7 @@ function App() {
         <Route path="/challenges" element={<Challenges />} />
         <Route path="/calculator" element={<Calculator />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
-        <Route path="/chatbot" element={<Chatbot />} />
+        <Route path="/chat" element={<Chatbot />} />
         <Route path="/profile" element={<Profile />} />
       </Route>
       
