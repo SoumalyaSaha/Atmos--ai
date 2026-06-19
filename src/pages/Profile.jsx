@@ -269,7 +269,7 @@ const [settings, setSettings] = useState({
               onClick={() => {
     localStorage.clear();
     setUser(null);
-    window.location.reload();
+    window.location.replace('/');
   }}
               className="w-full glass-card p-4 flex items-center justify-center gap-2 text-red-400 hover:bg-red-900/20 transition-colors"
 >
