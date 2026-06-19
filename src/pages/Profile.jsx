@@ -12,7 +12,8 @@ import {
   Leaf,
   TrendingUp,
   Calendar,
-  Zap
+  Zap,
+  Pencil
 } from 'lucide-react'
 import { AppContext } from '../App'
 import api from '../utils/api'
@@ -22,18 +23,32 @@ export default function Profile() {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
-const [settings, setSettings] = useState({
-  notifications: true,
-  weeklyReports: true,
-  challengeReminders: true,
-  darkMode: true,
-});
+  
+  // Name editing state
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [newName, setNewName] = useState('')
+
+  const [settings, setSettings] = useState({
+    notifications: true,
+    weeklyReports: true,
+    challengeReminders: true,
+    darkMode: true,
+  })
+
   const toggleSetting = (key) => {
-  setSettings(prev => ({
-    ...prev,
-    [key]: !prev[key]
-  }));
-};
+    setSettings(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }))
+  }
+
+  // Initialize newName when profile loads
+  useEffect(() => {
+    if (profile?.name || profile?.displayName) {
+      setNewName(profile.displayName || profile.name)
+    }
+  }, [profile])
+
   useEffect(() => {
     fetchProfile()
   }, [])
@@ -47,6 +62,23 @@ const [settings, setSettings] = useState({
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleNameUpdate = () => {
+    const nameToSave = newName.trim() || profile?.name || 'Eco Warrior'
+    const updatedProfile = { ...profile, displayName: nameToSave }
+    setProfile(updatedProfile)
+    // Also update user context if setUser is available
+    if (setUser) {
+      setUser(prev => ({ ...prev, displayName: nameToSave }))
+    }
+    localStorage.setItem('user', JSON.stringify({ ...user, displayName: nameToSave }))
+    setIsEditingName(false)
+  }
+
+  const handleCancel = () => {
+    setNewName(profile?.displayName || profile?.name || '')
+    setIsEditingName(false)
   }
 
   const tabs = [
@@ -88,7 +120,51 @@ const [settings, setSettings] = useState({
           </div>
         </div>
 
-        <h2 className="text-xl font-bold text-white mt-4">{profile?.name || 'Eco Warrior'}</h2>
+        {/* Name Display / Edit Section */}
+        <div className="mt-4">
+          {isEditingName ? (
+            <div className="flex items-center justify-center gap-2">
+              <input
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleNameUpdate()
+                  if (e.key === 'Escape') handleCancel()
+                }}
+                className="bg-gray-800 text-white px-3 py-1.5 rounded-lg text-sm border border-gray-700 focus:border-atmos-500 focus:outline-none w-48"
+                placeholder="Enter your name"
+                autoFocus
+              />
+              <button 
+                onClick={handleNameUpdate}
+                className="text-emerald-400 text-sm font-medium hover:text-emerald-300 px-2 py-1 rounded-lg hover:bg-emerald-900/20 transition-colors"
+              >
+                Save
+              </button>
+              <button 
+                onClick={handleCancel}
+                className="text-gray-400 text-sm font-medium hover:text-gray-300 px-2 py-1 rounded-lg hover:bg-gray-800 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center gap-2">
+              <h2 className="text-xl font-bold text-white">
+                {profile?.displayName || profile?.name || 'Eco Warrior'}
+              </h2>
+              <button 
+                onClick={() => setIsEditingName(true)}
+                className="p-1 text-gray-500 hover:text-atmos-400 hover:bg-gray-800 rounded-lg transition-colors"
+                title="Edit name"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
+        
         <p className="text-gray-400 text-sm">{profile?.email || 'user@atmos.ai'}</p>
         <p className="text-xs text-gray-600 mt-1">Member since {profile?.joinDate || '2026'}</p>
 
@@ -238,9 +314,10 @@ const [settings, setSettings] = useState({
               const Icon = setting.icon
               return (
                 <div 
-  key={setting.key} 
-  onClick={() => toggleSetting(setting.key)}
-  className="glass-card p-4 flex items-center justify-between cursor-pointer">
+                  key={setting.key} 
+                  onClick={() => toggleSetting(setting.key)}
+                  className="glass-card p-4 flex items-center justify-between cursor-pointer"
+                >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center">
                       <Icon className="w-5 h-5 text-gray-400" />
@@ -250,29 +327,29 @@ const [settings, setSettings] = useState({
                       <p className="text-xs text-gray-500">{setting.desc}</p>
                     </div>
                   </div>
-                 <div 
-  className={`relative w-12 h-6 rounded-full transition-colors ${
-    settings[setting.key] ? 'bg-atmos-600' : 'bg-gray-600'
-  }`}
->
-  <div 
-    className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
-      settings[setting.key] ? 'translate-x-6' : 'translate-x-1'
-    }`}
-  />
-</div>    
-</div>
-)
-})}
+                  <div 
+                    className={`relative w-12 h-6 rounded-full transition-colors ${
+                      settings[setting.key] ? 'bg-atmos-600' : 'bg-gray-600'
+                    }`}
+                  >
+                    <div 
+                      className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                        settings[setting.key] ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </div>    
+                </div>
+              )
+            })}
 
             <button
               onClick={() => {
-    localStorage.clear();
-    setUser(null);
-    window.location.replace('/');
-  }}
+                localStorage.clear()
+                setUser(null)
+                window.location.replace('/')
+              }}
               className="w-full glass-card p-4 flex items-center justify-center gap-2 text-red-400 hover:bg-red-900/20 transition-colors"
->
+            >
               <LogOut className="w-5 h-5" />
               <span className="font-medium">Sign Out</span>
             </button>
