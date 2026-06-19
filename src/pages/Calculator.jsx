@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Calculator, Car, Home, Utensils, ShoppingBag, Zap, ArrowRight, TreePine, DollarSign } from 'lucide-react'
+import { Calculator as CalculatorIcon, Car, Home, Utensils, ShoppingBag, Zap, ArrowRight, TreePine, DollarSign } from 'lucide-react'
 import api from '../utils/api'
 
 const categories = [
@@ -194,7 +194,7 @@ export default function Calculator() {
           />
         ) : (
           <>
-            <Calculator className="w-5 h-5" />
+            <CalculatorIcon className="w-5 h-5" />
             Calculate My Impact
             <ArrowRight className="w-5 h-5" />
           </>
