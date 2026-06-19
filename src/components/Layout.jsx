@@ -14,7 +14,7 @@ import {
   LogOut,
   ChevronRight
 } from 'lucide-react'
-import { Link, useLocation, Outlet } from 'react-router-dom'  // <-- ADDED Outlet
+import { Link, useLocation, Outlet } from 'react-router-dom'
 import { AppContext } from '../App'
 
 const navItems = [
@@ -26,7 +26,7 @@ const navItems = [
   { path: '/profile', icon: User, label: 'Profile' },
 ]
 
-export default function Layout() {  // <-- REMOVED { children }
+export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const location = useLocation()
@@ -138,9 +138,9 @@ export default function Layout() {  // <-- REMOVED { children }
       </motion.aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         {/* Header */}
-        <header className="sticky top-0 z-30 bg-gray-950/80 backdrop-blur-xl border-b border-gray-800/50">
+        <header className="shrink-0 z-30 bg-gray-950/80 backdrop-blur-xl border-b border-gray-800/50">
           <div className="flex items-center justify-between px-4 lg:px-8 py-4">
             <div className="flex items-center gap-4">
               <button
@@ -208,14 +208,15 @@ export default function Layout() {  // <-- REMOVED { children }
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto">
           <motion.div
             key={location.pathname}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
+            className="h-full p-4 lg:p-8"
           >
-            <Outlet />  {/* <-- CHANGED from {children} */}
+            <Outlet />
           </motion.div>
         </main>
       </div>
