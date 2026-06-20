@@ -1,29 +1,52 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useContext } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Trophy, Clock, Users, Leaf, ChevronRight, Star, Filter } from 'lucide-react'
+import { Trophy, Clock, Users, Leaf, ChevronRight, Star, Filter, AlertCircle, Lock } from 'lucide-react'
+import { AppContext } from '../App'
 import api from '../utils/api'
 
 const categories = ['All', 'Transport', 'Energy', 'Food', 'Waste', 'Water', 'Shopping']
 const difficulties = ['All', 'Easy', 'Medium', 'Hard']
 
 export default function Challenges() {
+  const { user, setUser, ecoPoints, setEcoPoints } = useContext(AppContext)
+  const navigate = useNavigate()
   const [challenges, setChallenges] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeCategory, setActiveCategory] = useState('All')
   const [activeDifficulty, setActiveDifficulty] = useState('All')
   const [joinedChallenges, setJoinedChallenges] = useState(new Set())
+  const [error, setError] = useState(null)
+
+  // Guard: Redirect if not onboarded
+  useEffect(() => {
+    if (!user?.onboardingComplete) {
+      navigate('/onboarding')
+    }
+  }, [user, navigate])
 
   useEffect(() => {
-    fetchChallenges()
-  }, [])
+    if (user?.onboardingComplete) {
+      fetchChallenges()
+    }
+  }, [user])
 
   const fetchChallenges = async () => {
+    setLoading(true)
+    setError(null)
+    
     try {
-      const res = await api.get('/challenges')
-      setChallenges(res.data.challenges || [])
+      const res = await api.get('/api/challenges')
+      if (res.data?.success) {
+        setChallenges(res.data.challenges || [])
+      } else {
+        // Use fallback if API limit reached
+        setChallenges(res.data?.challenges || [])
+      }
     } catch (error) {
       console.error('Error fetching challenges:', error)
-      // Fallback data
+      setError('Failed to load challenges. Using cached data.')
+      // Fallback data (only shown when API fails)
       setChallenges([
         {
           id: '1',
@@ -103,27 +126,38 @@ export default function Challenges() {
     }
   }
 
+  const toggleJoin = (challenge) => {
+    setJoinedChallenges(prev => {
+      const next = new Set(prev)
+      if (next.has(challenge.id)) {
+        next.delete(challenge.id)
+        // Remove points
+        if (setEcoPoints) {
+          setEcoPoints(prevPoints => Math.max(0, prevPoints - challenge.ecoPoints))
+        }
+      } else {
+        next.add(challenge.id)
+        // Add points
+        if (setEcoPoints) {
+          setEcoPoints(prevPoints => prevPoints + challenge.ecoPoints)
+        }
+        // Save to localStorage
+        const newPoints = (ecoPoints || 0) + challenge.ecoPoints
+        localStorage.setItem('ecoPoints', newPoints.toString())
+      }
+      return next
+    })
+  }
+
   const filteredChallenges = challenges.filter(c => {
     const catMatch = activeCategory === 'All' || c.category === activeCategory
     const diffMatch = activeDifficulty === 'All' || c.difficulty === activeDifficulty
     return catMatch && diffMatch
   })
 
-  const toggleJoin = (id) => {
-    setJoinedChallenges(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) {
-        next.delete(id)
-      } else {
-        next.add(id)
-      }
-      return next
-    })
-  }
-
   const getDifficultyColor = (diff) => {
     switch(diff) {
-      case 'Easy': return 'bg-atmos-900/50 text-atmos-400 border-atmos-800/50'
+      case 'Easy': return 'bg-emerald-900/50 text-emerald-400 border-emerald-800/50'
       case 'Medium': return 'bg-amber-900/50 text-amber-400 border-amber-800/50'
       case 'Hard': return 'bg-red-900/50 text-red-400 border-red-800/50'
       default: return 'bg-gray-800 text-gray-400'
@@ -132,7 +166,7 @@ export default function Challenges() {
 
   const getCategoryColor = (cat) => {
     const colors = {
-      'Transport': 'text-ocean-400',
+      'Transport': 'text-blue-400',
       'Energy': 'text-amber-400',
       'Food': 'text-green-400',
       'Waste': 'text-purple-400',
@@ -142,13 +176,32 @@ export default function Challenges() {
     return colors[cat] || 'text-gray-400'
   }
 
+  // Empty state if not onboarded
+  if (!user?.onboardingComplete) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <Lock className="w-16 h-16 text-gray-600 mb-4" />
+        <h3 className="text-xl font-bold text-white mb-2">Complete Setup First</h3>
+        <p className="text-gray-400 max-w-sm mb-6">
+          Calculate your carbon footprint to unlock challenges and earn eco points
+        </p>
+        <button
+          onClick={() => navigate('/calculator')}
+          className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg transition-all"
+        >
+          Go to Calculator
+        </button>
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          className="w-10 h-10 border-2 border-atmos-500 border-t-transparent rounded-full"
+          className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full"
         />
       </div>
     )
@@ -163,6 +216,38 @@ export default function Challenges() {
       >
         <h2 className="text-2xl font-bold text-white">Sustainability Challenges</h2>
         <p className="text-gray-400 mt-1">Join challenges, earn points, and reduce your carbon footprint</p>
+      </motion.div>
+
+      {/* Error */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-center gap-3"
+        >
+          <AlertCircle className="w-5 h-5 text-amber-400" />
+          <p className="text-amber-300 text-sm">{error}</p>
+        </motion.div>
+      )}
+
+      {/* Eco Points Display */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="bg-slate-800 rounded-xl p-4 border border-slate-700 flex items-center justify-between"
+      >
+        <div className="flex items-center gap-3">
+          <Trophy className="w-6 h-6 text-emerald-400" />
+          <div>
+            <p className="text-sm text-gray-400">Your Eco Points</p>
+            <p className="text-2xl font-bold text-white">{ecoPoints.toLocaleString()}</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-sm text-gray-400">Challenges Joined</p>
+          <p className="text-xl font-bold text-emerald-400">{joinedChallenges.size}</p>
+        </div>
       </motion.div>
 
       {/* Filters */}
@@ -184,7 +269,7 @@ export default function Challenges() {
               onClick={() => setActiveCategory(cat)}
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                 activeCategory === cat
-                  ? 'bg-atmos-600 text-white'
+                  ? 'bg-emerald-600 text-white'
                   : 'bg-gray-800/60 text-gray-400 hover:bg-gray-800'
               }`}
             >
@@ -200,7 +285,7 @@ export default function Challenges() {
               onClick={() => setActiveDifficulty(diff)}
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                 activeDifficulty === diff
-                  ? 'bg-ocean-600 text-white'
+                  ? 'bg-blue-600 text-white'
                   : 'bg-gray-800/60 text-gray-400 hover:bg-gray-800'
               }`}
             >
@@ -218,7 +303,7 @@ export default function Challenges() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 + index * 0.05 }}
-            className="glass-card p-5 card-hover"
+            className="bg-slate-800 rounded-xl p-5 border border-slate-700 hover:border-slate-600 transition-all"
           >
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
@@ -238,17 +323,17 @@ export default function Challenges() {
             <p className="text-sm text-gray-400 mb-4 leading-relaxed">{challenge.description}</p>
 
             <div className="grid grid-cols-3 gap-3 mb-4">
-              <div className="text-center p-2 bg-gray-800/40 rounded-xl">
+              <div className="text-center p-2 bg-slate-900/50 rounded-xl">
                 <Clock className="w-4 h-4 text-gray-500 mx-auto mb-1" />
                 <p className="text-xs text-gray-400">{challenge.duration}</p>
               </div>
-              <div className="text-center p-2 bg-gray-800/40 rounded-xl">
+              <div className="text-center p-2 bg-slate-900/50 rounded-xl">
                 <Users className="w-4 h-4 text-gray-500 mx-auto mb-1" />
                 <p className="text-xs text-gray-400">{challenge.participants?.toLocaleString()}</p>
               </div>
-              <div className="text-center p-2 bg-gray-800/40 rounded-xl">
-                <Leaf className="w-4 h-4 text-atmos-500 mx-auto mb-1" />
-                <p className="text-xs text-atmos-400">{challenge.co2Reduction}</p>
+              <div className="text-center p-2 bg-slate-900/50 rounded-xl">
+                <Leaf className="w-4 h-4 text-emerald-500 mx-auto mb-1" />
+                <p className="text-xs text-emerald-400">{challenge.co2Reduction}</p>
               </div>
             </div>
 
@@ -260,11 +345,11 @@ export default function Challenges() {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => toggleJoin(challenge.id)}
+                onClick={() => toggleJoin(challenge)}
                 className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                   joinedChallenges.has(challenge.id)
-                    ? 'bg-atmos-600 text-white'
-                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
                 }`}
               >
                 {joinedChallenges.has(challenge.id) ? 'Joined ✓' : 'Join Challenge'}
