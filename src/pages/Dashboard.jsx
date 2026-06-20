@@ -64,13 +64,13 @@ export default function Dashboard() {
     
     try {
       // Fetch real carbon footprint
-      const footprintRes = await api.get('/api/carbon/footprint')
+      const footprintRes = await api.get('/carbon/footprint')
       if (footprintRes.data?.success) {
         setFootprint(footprintRes.data.carbonFootprint)
       }
 
       // Fetch AI insights
-      const insightsRes = await api.post('/api/ai/insights', {
+      const insightsRes = await api.post('/ai/insights', {
         userData: {
           carbonFootprint: footprintRes.data?.carbonFootprint,
           weeklyEmissions: user?.carbonHistory?.slice(-7) || []
