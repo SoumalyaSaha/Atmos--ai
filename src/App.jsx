@@ -9,6 +9,7 @@ import Chatbot from './pages/Chatbot'
 import Profile from './pages/Profile'
 import Login from './pages/Login'
 import Onboarding from './pages/Onboarding'
+import api from './utils/api'
 
 export const AppContext = createContext()
 
@@ -42,7 +43,6 @@ export const calculateCarbonFootprint = (manualData, healthData = null) => {
   }
 
   if (!manualData && !healthData) return result
-
   if (manualData?.transport) {
     const { primaryMode, kmPerDay, vehicleType } = manualData.transport
     const factor = EMISSION_FACTORS.transport[vehicleType || primaryMode] || 0
@@ -55,7 +55,6 @@ export const calculateCarbonFootprint = (manualData, healthData = null) => {
     const gasEmission = (gasUsage || 0) * (EMISSION_FACTORS.homeEnergy[gasType] || EMISSION_FACTORS.homeEnergy.lpg)
     result.homeEnergy = parseFloat(((electricityEmission + gasEmission) / (householdSize || 1)).toFixed(2))
   }
-
   if (manualData?.diet) {
     const { dietType } = manualData.diet
     const dailyFactor = EMISSION_FACTORS.diet[dietType] || EMISSION_FACTORS.diet.vegetarian
@@ -74,7 +73,6 @@ export const calculateCarbonFootprint = (manualData, healthData = null) => {
     const factor = EMISSION_FACTORS.waste[disposalMethod] || EMISSION_FACTORS.waste.landfill
     result.waste = parseFloat(((monthlyWasteKg / (householdSize || 1)) * factor).toFixed(2))
   }
-
   result.total = parseFloat((
     result.mobility + result.homeEnergy + result.diet + 
     result.shopping + result.waste
@@ -93,27 +91,34 @@ function App() {
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('user')
     if (saved) {
-      const parsed = JSON.parse(saved)
-      if (parsed && !parsed.hasOwnProperty('onboardingComplete')) {
-        parsed.onboardingComplete = false
-        parsed.manualData = null
-        parsed.carbonFootprint = {
-          mobility: 0.00, homeEnergy: 0.00, diet: 0.00,
-          shopping: 0.00, waste: 0.00, total: 0.00, lastCalculated: null
+      try {
+        const parsed = JSON.parse(saved)
+        // Ensure userId is restored from localStorage if missing
+        if (!parsed.userId) {
+          const storedUserId = localStorage.getItem('userId')
+          if (storedUserId) parsed.userId = storedUserId
         }
-        localStorage.setItem('user', JSON.stringify(parsed))
+        if (parsed && !parsed.hasOwnProperty('onboardingComplete')) {
+          parsed.onboardingComplete = false
+          parsed.manualData = null
+          parsed.carbonFootprint = {
+            mobility: 0.00, homeEnergy: 0.00, diet: 0.00,
+            shopping: 0.00, waste: 0.00, total: 0.00, lastCalculated: null
+          }
+        }
+        if (parsed && !parsed.hasOwnProperty('age')) {
+          parsed.age = null
+          parsed.ageGroup = null
+          parsed.onboardingComplete = false
+        }
+        return parsed
+      } catch (e) {
+        console.error('Failed to parse saved user:', e)
+        return null
       }
-      if (parsed && !parsed.hasOwnProperty('age')) {
-        parsed.age = null
-        parsed.ageGroup = null
-        parsed.onboardingComplete = false
-        localStorage.setItem('user', JSON.stringify(parsed))
-      }
-      return parsed
     }
     return null
   })
-
   const [ecoPoints, setEcoPoints] = useState(() => {
     const saved = localStorage.getItem('ecoPoints')
     return saved ? parseInt(saved) : 0
@@ -125,6 +130,23 @@ function App() {
   })
 
   const [notifications, setNotifications] = useState([])
+
+  // On app startup: validate session with backend if userId exists
+  useEffect(() => {
+    const userId = localStorage.getItem('userId')
+    if (userId && user) {
+      api.get('/user/profile')
+        .then(res => {
+          if (res.data?.success) {
+            const fresh = res.data.profile
+            setUser(prev => ({ ...prev, ...fresh }))
+            setEcoPoints(fresh.ecoPoints || 0)
+            localStorage.setItem('user', JSON.stringify({ ...user, ...fresh }))
+          }
+        })
+              .catch(err => console.error('Session refresh failed:', err))
+    }
+  }, [])
 
   useEffect(() => {
     localStorage.setItem('ecoPoints', ecoPoints.toString())
@@ -139,6 +161,12 @@ function App() {
     localStorage.setItem('theme', darkMode ? 'dark' : 'light')
   }, [darkMode])
 
+  // Update localStorage when user changes
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user))
+    }
+  }, [user])
   return (
     <AppContext.Provider value={{ 
       user, 
@@ -167,8 +195,7 @@ function App() {
             )
           } 
         />
-
-        <Route 
+                <Route 
           path="/onboarding" 
           element={
             user ? (
