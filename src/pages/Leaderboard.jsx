@@ -53,7 +53,7 @@ export default function Leaderboard() {
     setError(null)
     
     try {
-      const res = await api.get('/api/leaderboard')
+      const res = await api.get('/leaderboard')
       if (res.data?.success) {
         setLeaderboard(res.data.leaderboard || [])
       } else {
