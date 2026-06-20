@@ -68,6 +68,9 @@ src/
 │   ├── Leaderboard.jsx
 │   ├── Chatbot.jsx
 │   └── Profile.jsx
+|   |___ Login.jsx
+|   |___ Onboarding.jsx
+|
 ├── utils/
 │   └── api.js
 ├── App.jsx
