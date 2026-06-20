@@ -12,9 +12,12 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token')
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
+    // Google OAuth: userId is the googleId (decoded.sub)
+    const userId = localStorage.getItem('userId')
+    if (userId) {
+      config.headers['x-user-id'] = userId
+      // Also send as Bearer token for backward compatibility
+      config.headers.Authorization = `Bearer ${userId}`
     }
     return config
   },
