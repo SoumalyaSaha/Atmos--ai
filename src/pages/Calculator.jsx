@@ -188,7 +188,7 @@ export default function Calculator() {
 
     try {
       const manualData = buildManualData()
-      const res = await api.post('/api/carbon/manual', { manualData })
+      const res = await api.post('/carbon/manual', { manualData })
       
       // Handle backend returning success: false
       if (!res.data?.success) {
