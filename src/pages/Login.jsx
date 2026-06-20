@@ -27,7 +27,8 @@ export default function Login() {
               googleId: decoded.sub,
               // Add editable display name (initially same as Google name)
               displayName: decoded.name || 'Eco Warrior',
-              
+              age: null,
+              ageGroup: null,
               // ============================================
               // NEW: Onboarding tracking flag
               // ============================================
