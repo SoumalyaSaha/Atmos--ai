@@ -128,6 +128,29 @@ const questions = {
   ],
 }
 
+// ZERO API CALL - Client-side emission factors
+const EMISSION_FACTORS = {
+  transport: {
+    walking: 0, cycling: 0, bus: 0.089, train: 0.041, metro: 0.035,
+    car_petrol: 0.21, car_diesel: 0.17, car_cng: 0.16,
+    bike_petrol: 0.10, auto_rickshaw: 0.12, flight: 0.255
+  },
+  homeEnergy: {
+    electricity: 0.71, lpg: 2.98, naturalGas: 2.1, biogas: 0.05
+  },
+  diet: {
+    vegan: 1.5, vegetarian: 2.0, eggetarian: 2.3,
+    meat_occasional: 2.8, meat_regular: 3.3, meat_heavy: 4.5
+  },
+  shopping: {
+    clothing: 0.015, electronics: 0.05, furniture: 0.03,
+    groceries: 0.008, other: 0.02
+  },
+  waste: {
+    landfill: 0.5, recycled: 0.05, composted: 0.02
+  }
+}
+
 export default function Calculator() {
   const { user, setUser } = useContext(AppContext)
   const navigate = useNavigate()
@@ -170,14 +193,62 @@ export default function Calculator() {
     }
   }
 
+  // ZERO API CALL - Pure client-side calculation
+  const calculateCarbonFootprint = (manualData) => {
+    const result = {
+      mobility: 0.00, homeEnergy: 0.00, diet: 0.00,
+      shopping: 0.00, waste: 0.00, total: 0.00,
+      lastCalculated: new Date().toISOString()
+    }
+
+    if (!manualData) return result
+
+    if (manualData.transport) {
+      const { vehicleType, kmPerDay } = manualData.transport
+      const factor = EMISSION_FACTORS.transport[vehicleType] || 0
+      result.mobility = parseFloat((kmPerDay * 30 * factor).toFixed(2))
+    }
+
+    if (manualData.homeEnergy) {
+      const { electricityKwh, gasUsage, gasType, householdSize } = manualData.homeEnergy
+      const electricityEmission = (electricityKwh || 0) * EMISSION_FACTORS.homeEnergy.electricity
+      const gasEmission = (gasUsage || 0) * (EMISSION_FACTORS.homeEnergy[gasType] || EMISSION_FACTORS.homeEnergy.lpg)
+      result.homeEnergy = parseFloat(((electricityEmission + gasEmission) / (householdSize || 1)).toFixed(2))
+    }
+
+    if (manualData.diet) {
+      const { dietType } = manualData.diet
+      const dailyFactor = EMISSION_FACTORS.diet[dietType] || EMISSION_FACTORS.diet.vegetarian
+      result.diet = parseFloat((dailyFactor * 30).toFixed(2))
+    }
+
+    if (manualData.shopping) {
+      const { monthlySpend, category } = manualData.shopping
+      const factor = EMISSION_FACTORS.shopping[category] || EMISSION_FACTORS.shopping.other
+      result.shopping = parseFloat((monthlySpend * factor).toFixed(2))
+    }
+
+    if (manualData.waste) {
+      const { bagsPerWeek, householdSize, disposalMethod } = manualData.waste
+      const monthlyWasteKg = (bagsPerWeek || 0) * 5 * 4
+      const factor = EMISSION_FACTORS.waste[disposalMethod] || EMISSION_FACTORS.waste.landfill
+      result.waste = parseFloat(((monthlyWasteKg / (householdSize || 1)) * factor).toFixed(2))
+    }
+
+    result.total = parseFloat((
+      result.mobility + result.homeEnergy + result.diet + 
+      result.shopping + result.waste
+    ).toFixed(2))
+
+    return result
+  }
+
   const calculate = async () => {
-    // Prevent double-submit
     if (loading || saved) return
 
-    // Validation
     const required = ['vehicleType', 'kmPerDay', 'electricityKwh', 'gasType', 'dietType', 'category', 'monthlySpend', 'bagsPerWeek', 'disposalMethod']
     const missing = required.filter(id => !answers[id])
-    
+
     if (missing.length > 0) {
       setError(`Please answer all questions. Missing: ${missing.length} fields`)
       return
@@ -188,39 +259,94 @@ export default function Calculator() {
 
     try {
       const manualData = buildManualData()
-      const res = await api.post('/carbon/manual', { manualData })
-      
-      // Handle backend returning success: false
+
+      // ZERO API CALL - Calculate entirely on client
+      const carbonFootprint = calculateCarbonFootprint(manualData)
+
+      // Build dashboard cache locally
+      const weeklyTrend = [carbonFootprint.total, carbonFootprint.total, carbonFootprint.total, 
+                          carbonFootprint.total, carbonFootprint.total, carbonFootprint.total, carbonFootprint.total]
+
+      const dashboardCache = {
+        generatedAt: new Date().toISOString(),
+        footprintAtGeneration: carbonFootprint.total,
+        breakdown: [
+          { category: 'Mobility', emission: carbonFootprint.mobility, icon: '🚗' },
+          { category: 'Home Energy', emission: carbonFootprint.homeEnergy, icon: '⚡' },
+          { category: 'Diet', emission: carbonFootprint.diet, icon: '🥗' },
+          { category: 'Shopping', emission: carbonFootprint.shopping, icon: '🛒' },
+          { category: 'Waste', emission: carbonFootprint.waste, icon: '🗑️' }
+        ],
+        recommendations: ['Great job calculating your carbon footprint! Update regularly for accurate tracking.'],
+        ecoScore: Math.max(0, Math.min(100, Math.round(100 - (carbonFootprint.total / 10)))),
+        weeklyTrend: weeklyTrend
+      }
+
+      // Build insights locally (basic, no AI call)
+      const insights = {
+        summary: `Your monthly carbon footprint is ${carbonFootprint.total} kg CO₂.`,
+        keyInsights: [
+          `Transport: ${carbonFootprint.mobility} kg - ${carbonFootprint.mobility > 50 ? 'High impact' : 'Good control'}`,
+          `Home Energy: ${carbonFootprint.homeEnergy} kg`,
+          `Diet: ${carbonFootprint.diet} kg`,
+        ],
+        actionItems: [
+          { title: 'Reduce Transport', impact: 'Use public transport', difficulty: 'Medium', co2Saved: '~20 kg' },
+          { title: 'Save Energy', impact: 'Switch to LED', difficulty: 'Easy', co2Saved: '~5 kg' },
+        ],
+        trendAnalysis: 'First calculation completed.',
+        goalProgress: { current: carbonFootprint.total, target: Math.max(50, carbonFootprint.total * 0.7), unit: 'kg CO2e' },
+        generatedAt: new Date().toISOString(),
+        footprintAtGeneration: carbonFootprint.total
+      }
+
+      // SINGLE API CALL - Save everything to backend
+      const savePayload = {
+        manualData,
+        carbonFootprint,
+        onboardingComplete: true,
+        dataSource: 'manual',
+        dashboardCache,
+        insights,
+        carbonHistory: [{ date: new Date().toISOString(), netFootprint: carbonFootprint.total }],
+        // Include age from user context (stored locally during onboarding)
+        age: user?.age || null,
+        ageGroup: user?.ageGroup || null,
+      }
+
+      const res = await api.post('/api/carbon/manual', savePayload)
+
       if (!res.data?.success) {
-        setError(res.data?.message || 'Calculation failed. Please try again.')
+        setError(res.data?.message || 'Save failed. Please try again.')
         return
       }
-      
-      setResult(res.data.carbonFootprint)
+
+      setResult(carbonFootprint)
       setSaved(true)
-      
-      // Update user context
+
+      // Update user context with everything
       const updatedUser = {
         ...user,
         onboardingComplete: true,
         dataSource: 'manual',
         manualData,
-        carbonFootprint: res.data.carbonFootprint
+        carbonFootprint,
+        dashboardCache,
+        insights
       }
       setUser(updatedUser)
       localStorage.setItem('user', JSON.stringify(updatedUser))
-      
-      // Redirect to dashboard after 3 seconds
+
       setTimeout(() => {
         navigate('/dashboard')
       }, 3000)
-      
+
     } catch (err) {
       console.error('Calculation error:', err)
       setError(
         err.response?.data?.message || 
         err.message || 
-        'Failed to calculate. Please check your connection and try again.'
+        'Failed to save. Please check your connection and try again.'
       )
     } finally {
       setLoading(false)
@@ -448,4 +574,4 @@ export default function Calculator() {
       </AnimatePresence>
     </div>
   )
-         }
+}
