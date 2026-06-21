@@ -93,7 +93,6 @@ function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
-        // Ensure userId is restored from localStorage if missing
         if (!parsed.userId) {
           const storedUserId = localStorage.getItem('userId')
           if (storedUserId) parsed.userId = storedUserId
@@ -119,6 +118,7 @@ function App() {
     }
     return null
   })
+
   const [ecoPoints, setEcoPoints] = useState(() => {
     const saved = localStorage.getItem('ecoPoints')
     return saved ? parseInt(saved) : 0
@@ -130,22 +130,41 @@ function App() {
   })
 
   const [notifications, setNotifications] = useState([])
+  const [isAuthLoading, setIsAuthLoading] = useState(true)
 
   // On app startup: validate session with backend if userId exists
   useEffect(() => {
     const userId = localStorage.getItem('userId')
-    if (userId && user) {
-      api.get('/user/profile')
-        .then(res => {
-          if (res.data?.success) {
-            const fresh = res.data.profile
-            setUser(prev => ({ ...prev, ...fresh }))
-            setEcoPoints(fresh.ecoPoints || 0)
-            localStorage.setItem('user', JSON.stringify({ ...user, ...fresh }))
-          }
-        })
-              .catch(err => console.error('Session refresh failed:', err))
+
+    if (!userId) {
+      setIsAuthLoading(false)
+      return
     }
+
+    api.get('/api/user/profile')
+      .then(res => {
+        if (res.data?.success) {
+          const fresh = res.data.profile
+          setUser(prev => {
+            const updated = { ...prev, ...fresh }
+            localStorage.setItem('user', JSON.stringify(updated))
+            return updated
+          })
+          setEcoPoints(fresh.ecoPoints || 0)
+        }
+      })
+      .catch(err => {
+        console.error('Session refresh failed:', err)
+        if (err.response?.status === 401) {
+          localStorage.removeItem('userId')
+          localStorage.removeItem('user')
+          localStorage.removeItem('token')
+          setUser(null)
+        }
+      })
+      .finally(() => {
+        setIsAuthLoading(false)
+      })
   }, [])
 
   useEffect(() => {
@@ -161,12 +180,20 @@ function App() {
     localStorage.setItem('theme', darkMode ? 'dark' : 'light')
   }, [darkMode])
 
-  // Update localStorage when user changes
   useEffect(() => {
     if (user) {
       localStorage.setItem('user', JSON.stringify(user))
     }
   }, [user])
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-950">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+      </div>
+    )
+  }
+
   return (
     <AppContext.Provider value={{ 
       user, 
@@ -195,7 +222,7 @@ function App() {
             )
           } 
         />
-                <Route 
+        <Route 
           path="/onboarding" 
           element={
             user ? (
