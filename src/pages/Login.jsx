@@ -13,7 +13,7 @@ export default function Login() {
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
       const decoded = JSON.parse(atob(credentialResponse.credential.split('.')[1]));
-      
+
       const googleId = decoded.sub;
       const userData = {
         name: decoded.name || 'Eco Warrior',
@@ -22,14 +22,31 @@ export default function Login() {
         googleId: googleId,
       };
 
+      console.log('[LOGIN] Sending to backend:', { googleId, name: userData.name });
+
       const res = await api.post('/api/auth/login', userData);
-      
+
       if (res.data.success) {
         const backendUser = res.data.user;
-        
+
+        console.log('[LOGIN] Backend response:', {
+          userId: backendUser.userId,
+          isNewUser: res.data.isNewUser,
+          onboardingComplete: backendUser.onboardingComplete
+        });
+
+        // CRITICAL: Always use backend's userId, NEVER use googleId
+        const correctUserId = backendUser.userId;
+
+        if (!correctUserId) {
+          console.error('[LOGIN] Backend did not return userId!');
+          throw new Error('Missing userId from backend');
+        }
+
         const fullUser = {
           ...userData,
           ...backendUser,
+          userId: correctUserId,  // Force correct userId
           name: backendUser.name || userData.name,
           email: backendUser.email || userData.email,
           picture: backendUser.avatar || userData.picture,
@@ -37,27 +54,40 @@ export default function Login() {
 
         setUser(fullUser);
         setEcoPoints(backendUser.ecoPoints || 0);
+
+        // Store in correct order: userId FIRST, then user object
+        localStorage.setItem('userId', correctUserId);
         localStorage.setItem('user', JSON.stringify(fullUser));
         localStorage.setItem('token', credentialResponse.credential);
-        localStorage.setItem('userId', backendUser.userId || googleId);
 
+        console.log('[LOGIN] Stored userId:', correctUserId);
+        console.log('[LOGIN] Stored user:', JSON.parse(localStorage.getItem('user'))?.userId);
+
+        // Determine redirect based on backend state
         const isExistingUser = backendUser.onboardingComplete === true && 
                                backendUser.carbonFootprint?.lastCalculated;
 
+        console.log('[LOGIN] Redirect decision:', isExistingUser ? 'dashboard' : 'onboarding');
+
         if (isExistingUser) {
-          navigate('/dashboard');
+          navigate('/dashboard', { replace: true });
         } else {
-          navigate('/onboarding');
+          navigate('/onboarding', { replace: true });
         }
+      } else {
+        console.error('[LOGIN] Backend returned success: false');
+        throw new Error('Login failed on backend');
       }
     } catch (error) {
-      console.error('Login error:', error);
-      navigate('/onboarding');
+      console.error('[LOGIN] Error:', error);
+      // Don't redirect on error - stay on login page
+      alert('Login failed. Please try again.');
     }
   };
 
   const handleGoogleError = () => {
-    console.error('Google Login Failed');
+    console.error('[LOGIN] Google Login Failed');
+    alert('Google sign-in failed. Please try again.');
   };
 
   return (
