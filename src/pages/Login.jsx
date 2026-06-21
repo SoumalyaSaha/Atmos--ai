@@ -12,13 +12,12 @@ export default function Login() {
     try {
       const decoded = JSON.parse(atob(credentialResponse.credential.split('.')[1]));
       
-      const googleId = decoded.sub; // Google's stable unique user ID
+      const googleId = decoded.sub;
       const userData = {
         name: decoded.name || 'Eco Warrior',
         email: decoded.email || 'user@atmos.ai',
         picture: decoded.picture || null,
         googleId: googleId,
-        displayName: decoded.name || 'Eco Warrior',
       };
       
       // Store in localStorage for API calls
@@ -37,27 +36,23 @@ export default function Login() {
         if (res.data?.success) {
           const backendUser = res.data.user;
           
-          // [FIXED] Check if returning user has completed onboarding
-          const isOnboardingComplete = backendUser.onboardingComplete === true;
-          const hasCarbonData = backendUser.carbonFootprint && 
-                                backendUser.carbonFootprint.lastCalculated !== null &&
-                                backendUser.carbonFootprint.total > 0;
+          // [FIXED] Check if returning user has completed onboarding using backend data
+          const isReturningUser = backendUser.onboardingComplete === true && 
+                                  backendUser.carbonFootprint?.lastCalculated != null;
           
+          // Merge Google data with backend data
           const mergedUser = { 
             ...userData, 
             ...backendUser,
-            onboardingComplete: isOnboardingComplete,
-            ecoPoints: backendUser.ecoPoints || 0,
-            streak: backendUser.streak || 0,
-            badges: backendUser.badges || []
+            userId: googleId,
           };
           
           setUser(mergedUser);
           setEcoPoints(backendUser.ecoPoints || 0);
           localStorage.setItem('user', JSON.stringify(mergedUser));
           
-          // [FIXED] Smart navigation based on user status
-          if (isOnboardingComplete && hasCarbonData) {
+          // [FIXED] Smart navigation based on actual backend user status
+          if (isReturningUser) {
             console.log('[LOGIN] Returning user → Dashboard');
             navigate('/dashboard');
           } else {
