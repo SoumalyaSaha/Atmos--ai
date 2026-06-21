@@ -49,7 +49,7 @@ const FAQ_CACHE = {
   // Transport
   'how to reduce transport emissions': 'Try: public transport 2x/week (save ~20 kg), carpool (save ~15 kg), cycling for short trips, or switch to EV.',
   'best transport for low carbon': 'Walking/cycling = 0 emissions. Bus = 0.089 kg/km. Metro = 0.035 kg/km. Car (petrol) = 0.21 kg/km.',
-  'should i buy ev': 'EVs have zero direct emissions! If charged via renewable energy, they're 70% cleaner than petrol cars.',
+  'should i buy ev': 'EVs have zero direct emissions! If charged via renewable energy, they are 70% cleaner than petrol cars.',
 
   // Home energy
   'how to save electricity': '1) LED bulbs (save ~5 kg), 2) Unplug devices (save ~3 kg), 3) Use fans vs AC (save ~10 kg), 4) Solar panels (save 50%+).',
