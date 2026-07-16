@@ -272,7 +272,7 @@ export default function Login() {
   };
 
   const handleGoogleError = () => {
-    alert('Google sign-in failed. Please try again.');
+    alert('Login failed: ' + (error.response?.data?.message || error.message || 'Unknown error') + ' | Status: ' + (error.response?.status || 'no response'));
   };
 
   return (
