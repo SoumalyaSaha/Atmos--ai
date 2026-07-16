@@ -223,16 +223,11 @@ export default function Login() {
 
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
-      const decoded = JSON.parse(atob(credentialResponse.credential.split('.')[1]));
-      const googleId = decoded.sub;
-      const userData = {
-        name: decoded.name || 'Eco Warrior',
-        email: decoded.email || 'user@atmos.ai',
-        picture: decoded.picture || null,
-        googleId: googleId,
-      };
-
-      const res = await api.post('/api/auth/login', userData);
+      // Send Google's sealed token UNOPENED — the backend verifies it with
+      // Google directly and only trusts what comes back from that check.
+      const res = await api.post('/api/auth/login', {
+        credential: credentialResponse.credential,
+      });
 
       if (res.data.success) {
         const backendUser = res.data.user;
@@ -241,14 +236,14 @@ export default function Login() {
         if (!correctUserId) {
           throw new Error('Missing userId from backend');
         }
+        if (!res.data.token) {
+          throw new Error('Missing session token from backend');
+        }
 
         const fullUser = {
-          ...userData,
           ...backendUser,
           userId: correctUserId,
-          name: backendUser.name || userData.name,
-          email: backendUser.email || userData.email,
-          picture: backendUser.avatar || userData.picture,
+          picture: backendUser.avatar,
         };
 
         setUser(fullUser);
@@ -256,7 +251,8 @@ export default function Login() {
 
         localStorage.setItem('userId', correctUserId);
         localStorage.setItem('user', JSON.stringify(fullUser));
-        localStorage.setItem('token', credentialResponse.credential);
+        // Our own signed session token — NOT the raw Google credential.
+        localStorage.setItem('token', res.data.token);
 
         const isExistingUser = backendUser.onboardingComplete === true && 
                                backendUser.carbonFootprint?.lastCalculated;
