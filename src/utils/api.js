@@ -24,13 +24,14 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      alert('401 on: ' + error.config?.url + ' | ' + JSON.stringify(error.response?.data));
       localStorage.removeItem('token');
       localStorage.removeItem('userId');
       localStorage.removeItem('user');
       window.location.href = '/';
+    } else {
+      alert('API error (non-401): ' + error.config?.url + ' | status: ' + error.response?.status + ' | ' + error.message);
     }
     return Promise.reject(error);
   }
 );
-
-export default api;
