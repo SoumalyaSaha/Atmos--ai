@@ -1,6 +1,6 @@
 import { GoogleLogin } from '@react-oauth/google';
 import { useContext, useEffect, useRef } from 'react';
-import { AppContext } from '../App';
+import { AppContext } from '../App'; 
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
