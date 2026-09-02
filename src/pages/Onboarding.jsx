@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Leaf, Calculator, ArrowRight, Calendar } from 'lucide-react';
 import { AppContext } from '../App';
-import api from '../utils/api';
+import api from '../utils/api'; 
 
 export default function Onboarding() {
   const { user, setUser } = useContext(AppContext);
