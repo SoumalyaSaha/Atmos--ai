@@ -9,7 +9,7 @@ const categories = ['All', 'Transport', 'Energy', 'Food', 'Waste', 'Water', 'Sho
 const difficulties = ['All', 'Easy', 'Medium', 'Hard']
 
 // ============================================
-// ICON MAPPING — Fixes text icons showing as "bus_icon", "plant_icon", etc.
+ // ICON MAPPING — Fixes text icons showing as "bus_icon", "plant_icon", etc.
 // ============================================
 const ICON_MAP = {
   // Transport
