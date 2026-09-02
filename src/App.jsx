@@ -9,7 +9,7 @@ import Chatbot from './pages/Chatbot'
 import Profile from './pages/Profile'
 import Login from './pages/Login'
 import Onboarding from './pages/Onboarding'
-import api from './utils/api'
+import api from './utils/api' 
 
 export const AppContext = createContext()
 
