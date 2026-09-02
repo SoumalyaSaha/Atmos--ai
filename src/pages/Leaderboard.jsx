@@ -19,7 +19,7 @@ const CARBON_BENCHMARKS = {
   world: { average: 400 }
 }
 
-// avatar can be a Google profile photo URL or an emoji fallback like '🌱' —
+// avatar can be a Google profile photo URL or an emoji fallback like '🌱' — 
 // this decides which one to render instead of printing the URL as text.
 const Avatar = ({ avatar, size = 'text-2xl', imgClass = 'w-8 h-8' }) => {
   const isImageUrl = typeof avatar === 'string' && avatar.startsWith('http');
