@@ -5,7 +5,7 @@ import {
   Leaf, TrendingUp, Calendar, Zap, Pencil, Target, CheckCircle, Flame, ArrowRight
 } from 'lucide-react'
 import { AppContext } from '../App'
-import api from '../utils/api'
+import api from '../utils/api' 
 
 export default function Profile() {
   const { user, setUser, darkMode, setDarkMode } = useContext(AppContext)
